@@ -439,7 +439,9 @@ const $=id=>document.getElementById(id);
 const ID={};let lastId=null;const tid=(w,i)=>(ID[w]&&ID[w][i])||w+'-'+i;
 const items=w=>D[w]||[];
 const cnt=w=>{let a=0,b=0;items(w).forEach((t,i)=>{if(P.v.includes(t[0])){b++;if(done[tid(w,i)])a++}});return[a,b]};
-let cur=(()=>{const t=new Date().toISOString().slice(0,10);const f=W.find(x=>x[3]>=t&&x[0]!=='w52'||x[0]==='w52'&&x[3]>=t);return f?f[0]:'w3'})();
+let cur=(()=>{const n=new Date(),t=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  const sun=x=>{const[y,mo,d]=x[3].split('-').map(Number);return new Date(Date.UTC(y,mo-1,d+2)).toISOString().slice(0,10)};
+  const f=W.find(x=>sun(x)>=t);return f?f[0]:'w3'})();
 function render(){try{extras()}catch(e){console.error(e)}
   let d=0,n=0;W.forEach(x=>{const[a,b]=cnt(x[0]);d+=a;n+=b});
   $('tp').textContent=d+' van '+n+' klaar';$('tb').style.width=(n?d/n*100:0)+'%';
@@ -536,8 +538,9 @@ $('sw').onclick=e=>{const b=e.target.closest('button');if(b)setAccent(b.dataset.
 $('pcol').oninput=e=>setAccent(hueOf(e.target.value));
 $('pal').onclick=()=>{const o=$('dPal').hidden;$('dPal').hidden=!o;if(o){drawSw();drawTh();drawBg()}};
 $('pClose').onclick=()=>{$('dPal').hidden=true};
-const VER='1.3';
+const VER='1.3.1';
 const LOG=[
+['1.3.1','21 nov 2026',['Het weekend hoort nu nog bij de week die net voorbij is, ook als je de planner opent en bij de D-toets']],
 ['1.3','21 nov 2026',['Begroeting bovenaan, met hoeveel taken je nog hebt in de week die je open hebt','Zachte overgang als je van week wisselt','Achtergrond kiezen in de instellingen: zacht, levendig, stipjes of effen','Sneltoetsen, zoals / om te zoeken en de pijltjes om van week te wisselen. Druk op ? voor het overzicht']],
 ['1.2.1','21 nov 2026',['Het vinkje bij een afgeronde week verstoort de vorm van het weekknopje niet meer','Code opgeruimd, zodat de planner lichter is']],
 ['1.2','20 nov 2026',['Versienummer linksonderin en deze updatelog, met een bolletje als er iets nieuws is','Een instellingenknop bovenaan voor thema (licht, donker of automatisch) en kleur','Korte uitleg bij je eerste bezoek, die je opnieuw kunt bekijken via de instellingenknop','Nieuw uiterlijk: glasachtige kaarten, een kleurverloop in de titel en nettere vinkjes met een rustig effect','Je vinkjes verspringen niet meer bij een nieuwe versie: elke taak heeft nu een vaste code. Je oude vinkjes worden vanzelf meegenomen']],
