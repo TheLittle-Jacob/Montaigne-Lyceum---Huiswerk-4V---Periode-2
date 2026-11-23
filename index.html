@@ -248,6 +248,10 @@ h1{background:var(--grad);-webkit-background-clip:text;background-clip:text;colo
 .kr{display:flex;gap:12px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
 .kk{flex:0 0 84px;display:flex;gap:4px}
 kbd{font:inherit;font-weight:800;font-size:.8rem;border:1px solid var(--line);border-bottom-width:3px;border-radius:7px;padding:1px 9px;background:var(--bg);color:var(--ink)}
+
+.inf{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;padding:0;font-size:.78rem;line-height:1;font-weight:800;align-self:center;margin-right:2px}
+.ic svg{display:block}
+#eT{margin:2px 0 8px}
 </style>
 </head>
 <body>
@@ -308,6 +312,17 @@ kbd{font:inherit;font-weight:800;font-size:.8rem;border:1px solid var(--line);bo
     <div class="tphead"><b>Sneltoetsen</b><button class="mini" id="kClose">Sluiten</button></div>
     <div id="kl"></div>
     <p class="sub" style="font-size:.8rem">Sneltoetsen werken niet terwijl je in een invulvak typt.</p>
+  </div>
+  <div class="tpanel addp" id="dEdit" role="dialog" aria-label="Taak aanpassen" hidden>
+    <div class="tphead"><b>Taak aanpassen</b><button class="mini" id="eClose">Sluiten</button></div>
+    <textarea id="eT" class="nt" rows="4" aria-label="Tekst van de taak"></textarea>
+    <p class="sub" id="eO" style="font-size:.8rem"></p>
+    <div class="rowb"><button class="go" id="eSave" style="width:auto;padding:10px 22px">Opslaan</button><button class="mini" id="eReset">Terug naar origineel</button></div>
+  </div>
+  <div class="tpanel addp" id="dInfo" role="dialog" aria-label="Toetsinfo" hidden>
+    <div class="tphead"><b id="iT">Toetsinfo</b><button class="mini" id="iClose">Sluiten</button></div>
+    <div id="iB"></div>
+    <p class="sub" style="font-size:.8rem">Dit komt uit de studiewijzer. Kijk in het toetsrooster voor de datum en in je PTA voor de regels.</p>
   </div>
   <div id="list"></div>
   <div id="extra">
@@ -508,6 +523,56 @@ let mg=0;[done,dl,star].forEach(o=>Object.keys(o).forEach(k=>{const m=/^(w\d+)-(
   const nid=ID[m[1]]&&ID[m[1]][+m[2]];if(nid&&o[nid]===undefined)o[nid]=o[k];delete o[k];mg=1}));
 if(mg){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
 sv('hw4v-custom',custom);
+const oldChunks=tx=>{
+  const m=/^(.*?: (?:alle )?(?:A-opgaven|opg))(?: \(([^)]*)\)| ([^()]*))$/.exec(tx);
+  if(m){const par=m[2]!==undefined,list=(par?m[2]:m[3]).split(/,\s*/);
+    if(list.length>=7&&list.every(x=>/^[A-Za-z]?\d+(?: t\/m [A-Za-z]?\d+)?$/.test(x))){const n=Math.ceil(list.length/5),sz=Math.ceil(list.length/n),r=[];
+      for(let i=0;i<list.length;i+=sz){const c=list.slice(i,i+sz).join(', ');r.push(par?m[1]+' ('+c+')':m[1]+' '+c)}return r}}
+  return[tx]};
+const splitTask=tx=>{
+  if(tx[0]==='!')return[tx];
+  if(tx.includes(' \u00b7 '))return tx.split(' \u00b7 ');
+  return[tx]};
+const ALIAS={},LEG={},PM=[],PARA={};
+[['w47','WD','2.3A/B, 2.4A/B/C: opg 42, 46, 48, 54, 56, 61, 62, 63, 69, 72, 73, 78',[['2.3A: opg 42'],['2.3B: opg 46, 48, 54, 56'],['2.4A: opg 61, 62, 63'],['2.4B: opg 69, 72, 73'],['2.4C: opg 78']]],
+ ['w48','WD','3.1A/B, 3.2A\u2013D: opg 3, 8, 9, 12, 15, 16, 20, 21, 25, 29, 33',[['3.1A: opg 3, 8, 9'],['3.1B: opg 12, 15, 16'],['3.2A: opg 20, 21'],['3.2B: opg 25'],['3.2C: opg 29'],['3.2D: opg 33']]],
+ ['w49','WD','3.3AB/C: opg 37, 41, 42, 43, 44, 46',[['3.3AB: opg 37, 41, 42, 43, 44'],['3.3C: opg 46']]],
+ ['w50','WD','3.4A/B/C: opg 53, 56, 58, 64, 65, 66, 67, 71',[['3.4A: opg 53, 56'],['3.4B: opg 58, 64, 65, 66, 67'],['3.4C: opg 71']]],
+ ['w51','WD','3.5A/B: opg 80, 81, 87',[['3.5A: opg 80, 81'],['3.5B: opg 87']]],
+ ['w47','BE','H3.1 t/m 3.4: opgaven 3.1, 3.2, 3.5, 3.6, 3.7, 3.9, 3.10',[['H3.1: opgaven 3.1 en 3.2'],['H3.2: opgaven 3.5 en 3.6'],['H3.3: opgave 3.7'],['H3.4: opgaven 3.9 en 3.10']]],
+ ['w48','BE','H4.1 t/m 4.3: opgaven 4.1, 4.2, 4.3 (a, b, c), 4.6, 4.7',[['H4.1: opgaven 4.1 en 4.2'],['H4.2: opgave 4.3 (a, b, c)'],['H4.3: opgaven 4.6 en 4.7']]],
+ ['w49','BE','H4.4, 5.1, 5.2: opgaven 4.8, 4.9, 4.10, 5.1, 5.3, 5.4, 5.7, 5.8',[['H4.4: opgaven 4.8, 4.9 en 4.10'],['H5.1: opgave 5.1'],['H5.2: opgaven 5.3, 5.4, 5.7 en 5.8']]],
+ ['w50','BE','H5.3 t/m 5.6: opgaven 5.10, 5.11, 5.13, 5.15, 5.17, 5.19, 5.20, 5.21, 5.23, 5.25, 5.26',[['H5.3: opgaven 5.10, 5.11, 5.13 en 5.15'],['H5.4: opgaven 5.17, 5.19 en 5.20'],['H5.5: opgaven 5.21 en 5.23'],['H5.6: opgaven 5.25 en 5.26']]],
+ ['w47','SK','H3.2: opg 8 t/m 26 \u00b7 Skilltree leerdoel 3, 4, 5',[['H3.2: opg 8 t/m 15',[0]],['Skilltree leerdoel 3, niveau 1 t/m 3',[1]],['H3.2: opg 16 t/m 19',[0]],['Skilltree leerdoel 4, niveau 1 t/m 3',[1]],['H3.2: opg 20 t/m 26',[0]],['Skilltree leerdoel 5, niveau 1 t/m 3',[1]]]],
+ ['w50','SK','H3.3: opg 27 t/m 42 \u00b7 Skilltree leerdoel 6, 7, 8',[['H3.3: opg 27 t/m 31',[0]],['Skilltree leerdoel 6, niveau 1 t/m 3',[1]],['H3.3: opg 32 t/m 35',[0]],['Skilltree leerdoel 7, niveau 1 t/m 3',[1]],['H3.3: opg 36 t/m 42 + ELO oefenopgaven nr 01 Bindingen',[0]],['Skilltree leerdoel 8, niveau 1 t/m 3',[1]]]],
+ ['w50','SK','H3.4: opg 43 t/m 48 + experiment 3.5 en 3.6 \u00b7 Skilltree leerdoel 9',[['H3.4: opg 43 t/m 48',[0]],['Experiment 3.5 en 3.6',[0]],['Skilltree leerdoel 9, niveau 1 t/m 3',[1]]]],
+ ['w1','SK','H4.2: opg 15, 16, 19, 20 t/m 27, 29 + experiment 4.1, 4.2, 4.9 + ELO oefenopgave 20',[['H4.2: opg 15, 16, 19'],['H4.2: opg 20 t/m 27 en 29'],['ELO oefenopgave 20 (oplossen en indampen)'],['Experiment 4.1 en 4.2'],['Experiment 4.9']]],
+ ['w1','SK','H4.3: opg 17 en 28 \u00b7 Skilltree leerdoel 13, 14, 15',[['H4.3: opg 17 en 28',[0]],['Skilltree leerdoel 13, niveau 1 t/m 3',[1]],['Skilltree leerdoel 14, niveau 1 t/m 3',[1]],['Skilltree leerdoel 15, niveau 1 t/m 3',[1]]]]
+].forEach(([w,k,o,p])=>{PARA[w+'|'+k+'|'+o]=p});
+for(const w in D){const nd=[],ni=[];D[w].forEach((t,i)=>{const id=ID[w][i],ps=t[2]?[t[1]]:splitTask(t[1]),pr=t[2]?0:PARA[w+'|'+t[0]+'|'+t[1]],ch=!t[2]&&ps.length===1&&t[1][0]!=='!'?oldChunks(t[1]):ps;
+  if(ps.length>1)ALIAS[id]=ps.map((_,k)=>id+'.'+k);else if(ch.length>1)LEG[id]=ch.map((_,k)=>id+'.'+k);
+  if(pr){PM.push([id,ch,pr]);pr.forEach((p,j)=>{nd.push([t[0],p[0],id+'.p'+j]);ni.push(id+'.p'+j)})}
+  else if(ps.length>1)ps.forEach((x,k)=>{nd.push([t[0],x,id+'.'+k]);ni.push(id+'.'+k)});
+  else{nd.push(t);ni.push(id)}});D[w]=nd;ID[w]=ni}
+let mg2=0;[done,dl,star].forEach(o=>Object.keys(ALIAS).forEach(k=>{if(o[k]!==undefined){ALIAS[k].forEach(n=>{if(o[n]===undefined)o[n]=o[k]});delete o[k];mg2=1}}));
+if(mg2){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
+const tk=x=>x.split(': ').slice(1).join(': ').match(/[A-Za-z]?\d+/g)||[];let mg3=0;
+const inPM=new Set(PM.map(x=>x[0]));
+Object.keys(LEG).forEach(id=>[done,dl,star].forEach(o=>{if(o[id]!==undefined){LEG[id].forEach(c=>{if(o[c]===undefined)o[c]=o[id]});delete o[id];mg3=1}}));
+PM.forEach(([id,ps,pr])=>{const cid=ALIAS[id]||LEG[id]||[id];
+  pr.forEach((p,j)=>{const nid=id+'.p'+j;let src=p[1];
+    if(!src){src=cid.length===1?[0]:cid.map((_,k)=>k).filter(k=>tk(ps[k]).some(x=>tk(p[0]).includes(x)));if(!src.length)src=cid.map((_,k)=>k)}
+    if(src.every(k=>done[cid[k]])){done[nid]=1;mg3=1}
+    const f=src.find(k=>dl[cid[k]]!==undefined);if(f!==undefined){dl[nid]=dl[cid[f]];mg3=1}
+    const g=src.find(k=>star[cid[k]]!==undefined);if(g!==undefined){star[nid]=star[cid[g]];mg3=1}});
+  cid.forEach(c=>{[done,dl,star].forEach(o=>{if(o[c]!==undefined){delete o[c];mg3=1}})})});
+Object.keys(LEG).filter(id=>!inPM.has(id)).forEach(id=>{const c=LEG[id];
+  if(c.every(x=>done[x])){done[id]=1;mg3=1}
+  const f=c.find(x=>dl[x]!==undefined);if(f!==undefined){dl[id]=dl[f];mg3=1}
+  const g=c.find(x=>star[x]!==undefined);if(g!==undefined){star[id]=star[g];mg3=1}
+  c.forEach(x=>[done,dl,star].forEach(o=>{if(o[x]!==undefined){delete o[x];mg3=1}}))});
+if(mg3){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
+
 const th=()=>document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
 const drawTh=()=>{const c=document.documentElement.dataset.theme||'auto';[...$('thm').children].forEach(b=>b.classList.toggle('on',b.dataset.t===c))};
 const setTheme=t=>{if(t==='auto'){delete document.documentElement.dataset.theme;try{localStorage.removeItem('hw4v-theme')}catch(e){}}
@@ -538,8 +603,9 @@ $('sw').onclick=e=>{const b=e.target.closest('button');if(b)setAccent(b.dataset.
 $('pcol').oninput=e=>setAccent(hueOf(e.target.value));
 $('pal').onclick=()=>{const o=$('dPal').hidden;$('dPal').hidden=!o;if(o){drawSw();drawTh();drawBg()}};
 $('pClose').onclick=()=>{$('dPal').hidden=true};
-const VER='1.3.1';
+const VER='1.4';
 const LOG=[
+['1.4','21 nov 2026',['Toetsinfo: tik bij een toets op het i-knopje voor de leerstof, de weging en de duur uit de studiewijzer','Taken waarin de studiewijzer meerdere onderdelen noemt, zijn opgedeeld in kleinere stappen. Bij Wiskunde D, Beco en Scheikunde staan de opgaven per paragraaf, zoals in de studiewijzer. Waar de studiewijzer niet aangeeft bij welke paragraaf een opgave hoort, zoals bij Wiskunde B, blijven de opgaven bij elkaar. Je vinkjes blijven kloppen: stond een grote taak al af, dan staan de stappen ook af','Taken zelf aanpassen met het potloodje. Je kunt altijd terug naar de originele tekst']],
 ['1.3.1','21 nov 2026',['Het weekend hoort nu nog bij de week die net voorbij is, ook als je de planner opent en bij de D-toets']],
 ['1.3','21 nov 2026',['Begroeting bovenaan, met hoeveel taken je nog hebt in de week die je open hebt','Zachte overgang als je van week wisselt','Achtergrond kiezen in de instellingen: zacht, levendig, stipjes of effen','Sneltoetsen, zoals / om te zoeken en de pijltjes om van week te wisselen. Druk op ? voor het overzicht']],
 ['1.2.1','21 nov 2026',['Het vinkje bij een afgeronde week verstoort de vorm van het weekknopje niet meer','Code opgeruimd, zodat de planner lichter is']],
@@ -585,10 +651,46 @@ $('tSkip').onclick=tourClose;
 $('pTour').onclick=()=>{$('dPal').hidden=true;tourOpen()};
 const KEYS=[[['/'],'Zoeken in alle taken'],[['\u2190','\u2192'],'Vorige of volgende week'],[['D'],'Naar deze week'],[['N'],'Nieuwe eigen taak'],[['F'],'Filter wisselen'],[['O'],'Alle vakken open- of dichtklappen'],[['T'],'Timer openen of sluiten'],[['I'],'Instellingen'],[['?'],'Dit overzicht'],[['Esc'],'Venster sluiten']];
 $('kl').innerHTML=KEYS.map(([k,t])=>'<div class="kr"><span class="kk">'+k.map(x=>'<kbd>'+x+'</kbd>').join('')+'</span><span>'+t+'</span></div>').join('');
-const closeAll=()=>{tOpen(false);['dAddP','dPal','dLog','dKeys'].forEach(i=>$(i).hidden=true)};
+const closeAll=()=>{tOpen(false);['dAddP','dPal','dLog','dKeys','dEdit','dInfo'].forEach(i=>$(i).hidden=true)};
 const openKeys=()=>{closeAll();$('dKeys').hidden=false};
 $('kbtn').onclick=$('pKeys').onclick=()=>{$('dPal').hidden=true;openKeys()};
 $('kClose').onclick=()=>{$('dKeys').hidden=true};
+let edits=ld('hw4v-edit',{}),editId=null;
+const loc=id=>{for(const w in ID){const i=ID[w].indexOf(id);if(i>=0)return[w,i]}};
+const TI=[
+['BE','beco421','PO Organisaties (H12 t/m 14)','1','n.v.t.'],['BE','beco422','SE H3, H4, H5','3','60 min'],
+['BI','biol421','PO Natuurwetenschappelijk onderzoek en verslag','2','n.v.t.'],['BI','biol422','Thema 2 Voortplanting','3','90 min'],
+['EC','ec421','Thema Welvaart (2.1 t/m 2.3)','2','90 min'],
+['EN','en421','Leesvaardigheid','Zie PTA','Zie PTA','Wordt afgenomen tijdens SE 2 (13\u201320 januari 2027). De exacte datum volgt via het toetsrooster.'],
+['FR','421','Schrijfvaardigheid','2','35 min'],['FR','422','Literatuur: Oscar et la dame en rose','2','60 min'],
+['GS','gesv421','Thema Democratie (PO)','1','PO'],['GS','gesv422','Tijdvakkentoets H3','2','60 min'],
+['GR','gtc421','Grammatica t/m les 26 en vertaling','1','35 min'],['GR','gtc422','Grammatica, teksten, woorden en cultuur t/m les 28; leestoets','2','60 min'],
+['LA','421','Proefvertaling Oude Testament','2','45 min'],['LA','422','Teksten zoals gelezen uit het Oude Testament en de grammatica van deze periode (eindtoets)','2','60 min'],
+['MA','maw421','Kernconcepten','1','35 min'],['MA','maw422','Hoofdstuk 2: De samenleving en verschillen','2','60 min'],
+['MS','maat421','Hoofdstuk 2: Rechtsstaat','2','60 min'],
+['NL','nlt421','PO Ruimte voor de rivier','5 (3,33%)','-','Module robotica heeft een PO (nlt431) en een SE (nlt432) in periode 3.'],
+['NA','natv421','H2 Elektriciteit (PO)','1','-','Inleveren in week 50.','po weerstand'],['NA','natv422','H2 Elektriciteit','3','60 min'],
+['NE','netl421','Handboek Nepnieuws en Framing (inclusief PowerPoints)','2x','90 min','Bekijk goed in de studiewijzer welke artikelen ook tentamenstof zijn.'],
+['SK','schk402','Tussentoets chemisch rekenen: dichtheid, rekenen met mol, molair volume (Vm) en molariteit','2 (SE: 2,9%)','35 min','Wordt afgenomen tijdens het instructieuur; de instructie wordt dan verplaatst naar het labuur. Oefen de rekenonderdelen vooraf in Leer Chemisch Rekenen (ELO).'],
+['SK','schk403','Tentamen H3 Moleculaire stoffen en H4 Zouten','3 (SE: 4,3%)','60 min'],
+['SP','421','Fantástico H4-5','2','60 min'],
+['TE','414','Hoofdstuk 3.1 t/m 3.4','1','60 min'],
+['WA','wisav421','Statistiek (H2) en Rekenen en herleiden (H3)','3','90 min'],
+['WB','wisb421','H2 De afgeleide functie en H4 Vergelijkingen en herleidingen','3','90 min'],
+['WD','wisdv421','H2 Discrete wiskunde en H3 Kansrekening','4','90 min']];
+const info=(k,tx)=>{const l=tx.toLowerCase();return TI.find(x=>x[0]===k&&(l.includes(x[1])||(x[6]&&l.includes(x[6]))))};
+function openEdit(id){const l=loc(id);if(!l)return;const t=D[l[0]][l[1]],o=t[1][0]==='!'?t[1].slice(1):t[1];editId=id;closeAll();
+  $('eT').value=edits[id]!==undefined?edits[id]:o;$('eO').textContent=edits[id]!==undefined?'Origineel: '+o:'';$('dEdit').hidden=false;$('eT').focus()}
+function openInfo(id){const l=loc(id);if(!l)return;const t=D[l[0]][l[1]],f=info(t[0],t[1]);if(!f)return;closeAll();
+  $('iT').textContent=V[t[0]][0]+' \u00b7 '+wl(l[0]);
+  $('iB').innerHTML=[['Leerstof',f[2]],['Weging',f[3]],['Duur',f[4]],f[5]?['Let op',f[5]]:null].filter(Boolean).map(r=>'<div class="kr"><span class="kk">'+r[0]+'</span><span>'+r[1]+'</span></div>').join('');
+  $('dInfo').hidden=false}
+$('eSave').onclick=()=>{const v=$('eT').value.trim(),l=loc(editId);if(!v||!l)return;const t=D[l[0]][l[1]],o=t[1][0]==='!'?t[1].slice(1):t[1];
+  if(v===o)delete edits[editId];else edits[editId]=v;sv('hw4v-edit',edits);$('dEdit').hidden=true;render()};
+$('eReset').onclick=()=>{delete edits[editId];sv('hw4v-edit',edits);$('dEdit').hidden=true;render()};
+$('eClose').onclick=()=>{$('dEdit').hidden=true};
+$('iClose').onclick=()=>{$('dInfo').hidden=true};
+
 document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||$('app').hidden)return;
   const t=e.target,typ=t&&(t.isContentEditable||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||(t.tagName==='INPUT'&&!/^(checkbox|radio|button)$/.test(t.type)));
@@ -618,8 +720,8 @@ applyAccent();
 const ds=d=>{const t=new Date();t.setHours(0,0,0,0);const n=Math.round((new Date(d+'T00:00')-t)/864e5);
   const lab=new Date(d+'T12:00').toLocaleDateString('nl-NL',{weekday:'short',day:'numeric',month:'short'});
   return[lab+' \u00b7 '+(n<0?'te laat':n===0?'vandaag':n===1?'morgen':'over '+n+' dagen'),n<0?'late':n<=1?'soon':'']};
-const rowH=(w,i,meta,ex)=>{const t=D[w][i],id=tid(w,i),to=t[1][0]==='!',c=cu.has(id),tx=to?t[1].slice(1):c?esc(t[1]):t[1],d=dl[id],[dt,dc]=d?ds(d):['',''];
-  return `<label class="t ${done[id]?'done':''}${lastId===id?' pop':''}" style="--c:hsl(${V[t[0]][1]} 65% 52%)"><input type="checkbox" data-id="${id}" ${done[id]?'checked':''} aria-label="Afvinken"><span class="tb"><span class="tx">${to?'<em class="tag" style="font-style:normal">Toets</em>':''}${c?'<em class="tag mine" style="font-style:normal">Eigen</em>':''}${tx}</span>${meta?`<small class="meta">${V[t[0]][0]} \u00b7 ${wl(w)}${ex?' \u00b7 '+ex:''}</small>`:''}<button class="dlb ${done[id]?'':dc}" data-dlb="${id}">${d?'Deadline '+dt:'+ deadline'}</button></span><span class="ac"><button class="ic ${star[id]?'on':''}" data-star="${id}" aria-pressed="${!!star[id]}" aria-label="Belangrijk">${star[id]?'\u2605':'\u2606'}</button>${c?`<button class="ic" data-del="${id}" aria-label="Verwijder taak">\u2715</button>`:''}</span></label>`};
+const rowH=(w,i,meta,ex)=>{const t=D[w][i],id=tid(w,i),to=t[1][0]==='!',c=cu.has(id),ed=edits[id]!==undefined,tx=ed?esc(edits[id]):to?t[1].slice(1):c?esc(t[1]):t[1],inf=to&&info(t[0],t[1]),d=dl[id],[dt,dc]=d?ds(d):['',''];
+  return `<label class="t ${done[id]?'done':''}${lastId===id?' pop':''}" style="--c:hsl(${V[t[0]][1]} 65% 52%)"><input type="checkbox" data-id="${id}" ${done[id]?'checked':''} aria-label="Afvinken"><span class="tb"><span class="tx">${to?'<em class="tag" style="font-style:normal">Toets</em>':''}${c?'<em class="tag mine" style="font-style:normal">Eigen</em>':ed?'<em class="tag mine" style="font-style:normal">Aangepast</em>':''}${tx}</span>${meta?`<small class="meta">${V[t[0]][0]} \u00b7 ${wl(w)}${ex?' \u00b7 '+ex:''}</small>`:''}<button class="dlb ${done[id]?'':dc}" data-dlb="${id}">${d?'Deadline '+dt:'+ deadline'}</button></span><span class="ac">${inf?`<button class="ic inf" data-info="${id}" aria-label="Toetsinfo" title="Toetsinfo">i</button>`:''}<button class="ic" data-edit="${id}" aria-label="Taak aanpassen" title="Taak aanpassen"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button><button class="ic ${star[id]?'on':''}" data-star="${id}" aria-pressed="${!!star[id]}" aria-label="Belangrijk">${star[id]?'\u2605':'\u2606'}</button>${c?`<button class="ic" data-del="${id}" aria-label="Verwijder taak">\u2715</button>`:''}</span></label>`};
 const row=(w,i,ex)=>rowH(w,i,1,ex);
 function pickDate(id,btn){const r=btn.getBoundingClientRect(),i=document.createElement('input');i.type='date';i.value=dl[id]||'';
   i.style.cssText='position:fixed;opacity:0;width:1px;height:1px;left:'+r.left+'px;top:'+r.bottom+'px';document.body.appendChild(i);
@@ -635,7 +737,9 @@ function delTask(id){const j=custom.findIndex(c=>c[4]===id);if(j<0)return;const 
 const act=e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.star){e.preventDefault();if(star[d.star])delete star[d.star];else star[d.star]=1;sv('hw4v-star',star);render()}
   else if(d.del){e.preventDefault();delTask(d.del)}
-  else if(d.dlb){e.preventDefault();pickDate(d.dlb,b)}};
+  else if(d.dlb){e.preventDefault();pickDate(d.dlb,b)}
+  else if(d.edit){e.preventDefault();openEdit(d.edit)}
+  else if(d.info){e.preventDefault();openInfo(d.info)}};
 ['list','extra'].forEach(i=>$(i).addEventListener('click',act));
 $('aGo').onclick=()=>{const ok=$('aT').value.trim();addTask(cur,$('aV').value,$('aT').value,$('aD').value);if(ok){$('aT').value='';$('aD').value='';$('dAddP').hidden=true}};
 $('plus').onclick=()=>{$('dAddP').hidden=false;$('aT').focus()};
@@ -646,7 +750,7 @@ function searchHTML(){
   const ts=Q().split(/\s+/);let n=0;const r=[];
   W.forEach(x=>(D[x[0]]||[]).forEach((t,i)=>{
     if(!P.v.includes(t[0]))return;
-    const h=(t[1]+' '+V[t[0]][0]+' '+x[1]).toLowerCase();
+    const h=((edits[tid(x[0],i)]||t[1])+' '+V[t[0]][0]+' '+x[1]).toLowerCase();
     if(ts.every(q=>h.includes(q))){n++;if(r.length<80)r.push(row(x[0],i))}}));
   return `<section class="vak" style="--c:var(--acc)"><h3 style="cursor:default"><em class="vn">${n} ${n===1?'resultaat':'resultaten'}</em></h3>${r.join('')||'<div class="empty">Niets gevonden.</div>'}</section>`}
 function extras(){
@@ -699,7 +803,7 @@ treset();
 const tOpen=o=>{$('dTimer').hidden=!o;$('tbtn').setAttribute('aria-expanded',o)};
 $('tbtn').onclick=()=>tOpen($('dTimer').hidden);
 $('tclose').onclick=()=>tOpen(false);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){tOpen(false);$('dAddP').hidden=true;$('dPal').hidden=true;$('dLog').hidden=true;$('dKeys').hidden=true;if(!$('tour').hidden)tourClose()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){tOpen(false);$('dAddP').hidden=true;$('dPal').hidden=true;$('dLog').hidden=true;$('dKeys').hidden=true;$('dEdit').hidden=true;$('dInfo').hidden=true;if(!$('tour').hidden)tourClose()}});
 $('edit').onclick=showSetup;
 $('prof').onchange=e=>{
   const p=e.target.value,old=P.p,cb=[...document.querySelectorAll('#vakken input')];
