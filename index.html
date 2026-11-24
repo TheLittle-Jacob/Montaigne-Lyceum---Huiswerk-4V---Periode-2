@@ -529,11 +529,8 @@ const oldChunks=tx=>{
     if(list.length>=7&&list.every(x=>/^[A-Za-z]?\d+(?: t\/m [A-Za-z]?\d+)?$/.test(x))){const n=Math.ceil(list.length/5),sz=Math.ceil(list.length/n),r=[];
       for(let i=0;i<list.length;i+=sz){const c=list.slice(i,i+sz).join(', ');r.push(par?m[1]+' ('+c+')':m[1]+' '+c)}return r}}
   return[tx]};
-const splitTask=tx=>{
-  if(tx[0]==='!')return[tx];
-  if(tx.includes(' \u00b7 '))return tx.split(' \u00b7 ');
-  return[tx]};
-const ALIAS={},LEG={},PM=[],PARA={};
+const partsOf=tx=>tx[0]==='!'?[tx]:tx.includes(' \u00b7 ')?tx.split(' \u00b7 '):[tx];
+const PARAS=new Map();
 [['w47','WD','2.3A/B, 2.4A/B/C: opg 42, 46, 48, 54, 56, 61, 62, 63, 69, 72, 73, 78',[['2.3A: opg 42'],['2.3B: opg 46, 48, 54, 56'],['2.4A: opg 61, 62, 63'],['2.4B: opg 69, 72, 73'],['2.4C: opg 78']]],
  ['w48','WD','3.1A/B, 3.2A\u2013D: opg 3, 8, 9, 12, 15, 16, 20, 21, 25, 29, 33',[['3.1A: opg 3, 8, 9'],['3.1B: opg 12, 15, 16'],['3.2A: opg 20, 21'],['3.2B: opg 25'],['3.2C: opg 29'],['3.2D: opg 33']]],
  ['w49','WD','3.3AB/C: opg 37, 41, 42, 43, 44, 46',[['3.3AB: opg 37, 41, 42, 43, 44'],['3.3C: opg 46']]],
@@ -548,30 +545,20 @@ const ALIAS={},LEG={},PM=[],PARA={};
  ['w50','SK','H3.4: opg 43 t/m 48 + experiment 3.5 en 3.6 \u00b7 Skilltree leerdoel 9',[['H3.4: opg 43 t/m 48',[0]],['Experiment 3.5 en 3.6',[0]],['Skilltree leerdoel 9, niveau 1 t/m 3',[1]]]],
  ['w1','SK','H4.2: opg 15, 16, 19, 20 t/m 27, 29 + experiment 4.1, 4.2, 4.9 + ELO oefenopgave 20',[['H4.2: opg 15, 16, 19'],['H4.2: opg 20 t/m 27 en 29'],['ELO oefenopgave 20 (oplossen en indampen)'],['Experiment 4.1 en 4.2'],['Experiment 4.9']]],
  ['w1','SK','H4.3: opg 17 en 28 \u00b7 Skilltree leerdoel 13, 14, 15',[['H4.3: opg 17 en 28',[0]],['Skilltree leerdoel 13, niveau 1 t/m 3',[1]],['Skilltree leerdoel 14, niveau 1 t/m 3',[1]],['Skilltree leerdoel 15, niveau 1 t/m 3',[1]]]]
-].forEach(([w,k,o,p])=>{PARA[w+'|'+k+'|'+o]=p});
-for(const w in D){const nd=[],ni=[];D[w].forEach((t,i)=>{const id=ID[w][i],ps=t[2]?[t[1]]:splitTask(t[1]),pr=t[2]?0:PARA[w+'|'+t[0]+'|'+t[1]],ch=!t[2]&&ps.length===1&&t[1][0]!=='!'?oldChunks(t[1]):ps;
-  if(ps.length>1)ALIAS[id]=ps.map((_,k)=>id+'.'+k);else if(ch.length>1)LEG[id]=ch.map((_,k)=>id+'.'+k);
-  if(pr){PM.push([id,ch,pr]);pr.forEach((p,j)=>{nd.push([t[0],p[0],id+'.p'+j]);ni.push(id+'.p'+j)})}
-  else if(ps.length>1)ps.forEach((x,k)=>{nd.push([t[0],x,id+'.'+k]);ni.push(id+'.'+k)});
-  else{nd.push(t);ni.push(id)}});D[w]=nd;ID[w]=ni}
-let mg2=0;[done,dl,star].forEach(o=>Object.keys(ALIAS).forEach(k=>{if(o[k]!==undefined){ALIAS[k].forEach(n=>{if(o[n]===undefined)o[n]=o[k]});delete o[k];mg2=1}}));
-if(mg2){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
-const tk=x=>x.split(': ').slice(1).join(': ').match(/[A-Za-z]?\d+/g)||[];let mg3=0;
-const inPM=new Set(PM.map(x=>x[0]));
-Object.keys(LEG).forEach(id=>[done,dl,star].forEach(o=>{if(o[id]!==undefined){LEG[id].forEach(c=>{if(o[c]===undefined)o[c]=o[id]});delete o[id];mg3=1}}));
-PM.forEach(([id,ps,pr])=>{const cid=ALIAS[id]||LEG[id]||[id];
-  pr.forEach((p,j)=>{const nid=id+'.p'+j;let src=p[1];
-    if(!src){src=cid.length===1?[0]:cid.map((_,k)=>k).filter(k=>tk(ps[k]).some(x=>tk(p[0]).includes(x)));if(!src.length)src=cid.map((_,k)=>k)}
-    if(src.every(k=>done[cid[k]])){done[nid]=1;mg3=1}
-    const f=src.find(k=>dl[cid[k]]!==undefined);if(f!==undefined){dl[nid]=dl[cid[f]];mg3=1}
-    const g=src.find(k=>star[cid[k]]!==undefined);if(g!==undefined){star[nid]=star[cid[g]];mg3=1}});
-  cid.forEach(c=>{[done,dl,star].forEach(o=>{if(o[c]!==undefined){delete o[c];mg3=1}})})});
-Object.keys(LEG).filter(id=>!inPM.has(id)).forEach(id=>{const c=LEG[id];
-  if(c.every(x=>done[x])){done[id]=1;mg3=1}
-  const f=c.find(x=>dl[x]!==undefined);if(f!==undefined){dl[id]=dl[f];mg3=1}
-  const g=c.find(x=>star[x]!==undefined);if(g!==undefined){star[id]=star[g];mg3=1}
-  c.forEach(x=>[done,dl,star].forEach(o=>{if(o[x]!==undefined){delete o[x];mg3=1}}))});
-if(mg3){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
+].forEach(([w,k,o,p])=>PARAS.set(w+'|'+k+'|'+o,p.length));
+// Een eerdere tussenversie had sommige taken opgedeeld. Alles staat weer als een taak: de vinkjes van die delen worden teruggevoegd.
+const FOLD=[];
+for(const w in D)D[w].forEach((t,i)=>{if(t[2]||t[1][0]==='!')return;const id=ID[w][i],sets=[],a=partsOf(t[1]),c=a.length===1?oldChunks(t[1]):[t[1]],n=PARAS.get(w+'|'+t[0]+'|'+t[1]);
+  if(a.length>1)sets.push(a.map((_,k)=>id+'.'+k));if(c.length>1)sets.push(c.map((_,k)=>id+'.'+k));if(n)sets.push(Array.from({length:n},(_,j)=>id+'.p'+j));
+  if(sets.length)FOLD.push([id,sets])});
+let mg4=0;
+FOLD.forEach(([id,sets])=>{let all=0,dd,ss;const del=[];
+  sets.forEach(S=>{if(!S.some(x=>done[x]!==undefined||dl[x]!==undefined||star[x]!==undefined))return;
+    if(S.every(x=>done[x]))all=1;if(dd===undefined)dd=S.find(x=>dl[x]!==undefined);if(ss===undefined)ss=S.find(x=>star[x]!==undefined);del.push(...S)});
+  if(!del.length)return;
+  if(all)done[id]=1;if(dd!==undefined)dl[id]=dl[dd];if(ss!==undefined)star[id]=star[ss];
+  del.forEach(x=>[done,dl,star].forEach(o=>{delete o[x]}));mg4=1});
+if(mg4){save();sv('hw4v-dl',dl);sv('hw4v-star',star)}
 
 const th=()=>document.documentElement.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
 const drawTh=()=>{const c=document.documentElement.dataset.theme||'auto';[...$('thm').children].forEach(b=>b.classList.toggle('on',b.dataset.t===c))};
@@ -605,7 +592,7 @@ $('pal').onclick=()=>{const o=$('dPal').hidden;$('dPal').hidden=!o;if(o){drawSw(
 $('pClose').onclick=()=>{$('dPal').hidden=true};
 const VER='1.4';
 const LOG=[
-['1.4','21 nov 2026',['Toetsinfo: tik bij een toets op het i-knopje voor de leerstof, de weging en de duur uit de studiewijzer','Taken waarin de studiewijzer meerdere onderdelen noemt, zijn opgedeeld in kleinere stappen. Bij Wiskunde D, Beco en Scheikunde staan de opgaven per paragraaf, zoals in de studiewijzer. Waar de studiewijzer niet aangeeft bij welke paragraaf een opgave hoort, zoals bij Wiskunde B, blijven de opgaven bij elkaar. Je vinkjes blijven kloppen: stond een grote taak al af, dan staan de stappen ook af','Taken zelf aanpassen met het potloodje. Je kunt altijd terug naar de originele tekst']],
+['1.4','21 nov 2026',['Toetsinfo: tik bij een toets op het i-knopje voor de leerstof, de weging en de duur uit de studiewijzer','Taken zelf aanpassen met het potloodje. Je kunt altijd terug naar de originele tekst']],
 ['1.3.1','21 nov 2026',['Het weekend hoort nu nog bij de week die net voorbij is, ook als je de planner opent en bij de D-toets']],
 ['1.3','21 nov 2026',['Begroeting bovenaan, met hoeveel taken je nog hebt in de week die je open hebt','Zachte overgang als je van week wisselt','Achtergrond kiezen in de instellingen: zacht, levendig, stipjes of effen','Sneltoetsen, zoals / om te zoeken en de pijltjes om van week te wisselen. Druk op ? voor het overzicht']],
 ['1.2.1','21 nov 2026',['Het vinkje bij een afgeronde week verstoort de vorm van het weekknopje niet meer','Code opgeruimd, zodat de planner lichter is']],
